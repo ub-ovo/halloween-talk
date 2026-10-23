@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문자 메신저</title>
+    
+    <!-- html2canvas 라이브러리 (화면 캡쳐용) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0914;
+            --win-bg: #d4d0c8;
+            --win-border-light: #ffffff;
+            --win-border-dark: #404040;
+            --win-text: #000000;
+
+            --title-bg: linear-gradient(90deg, #0a246a, #a6caf0);
+            --title-text: #ffffff;
+
+            --menu-hover-bg: #0a246a;
+            --menu-hover-text: #ffffff;
+
+            --tab-bar-bg: #b0ac9a;
+            --tab-btn-bg: #d4d0c8;
+            --tab-btn-text: #333333;
+            --tab-active-bg: var(--win-bg);
+            --tab-active-text: #0a246a;
+
+            --center-title-bg: #ffffff;
+            --center-title-text: #880000;
+            --center-title-border: #808080;
+
+            --lcd-bg: #e2ede9;
+            --lcd-text: #0d2818;
+
+            --panel-header-bg: #0a246a;
+            --panel-header-text: #ffffff;
+
+            --side-btn-bg: #d4d0c8;
+            --side-btn-text: #000000;
+
+            --btn-bg: #d4d0c8;
+            --btn-text: #000000;
+            --btn-primary-text: #000080;
+            --reserve-btn-bg: #fff8dc;
+            --reserve-btn-text: #000000;
+
+            --sent-bubble-bg: #fef8cc;
+            --sent-bubble-text: #222222;
+            --recv-bubble-bg: #4a0000;
+            --recv-bubble-text: #ffdddd;
+            --recv-bubble-border: #880000;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            font-family: 'Gulim', '굴림', 'Dotum', '돋움', sans-serif;
+            font-size: 12px;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s;
+        }
+
+        .window {
+            width: 820px;
+            background: var(--win-bg);
+            color: var(--win-text);
+            border: 2px solid;
+            border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light);
+            box-shadow: 6px 6px 20px rgba(0, 0, 0, 0.8);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .window.maximized {
+            width: 98vw !important;
+            max-width: 1200px;
+        }
+
+        .title-bar {
+            background: var(--title-bg);
+            color: var(--title-text);
+            padding: 3px 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .title-controls {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+        }
+
+        .title-btn {
+            background: var(--win-bg);
+            border: 1px solid;
+            border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light);
+            padding: 1px 5px;
+            font-size: 11px;
+            cursor: pointer;
+            color: var(--win-text);
+        }
+
+        .sound-btn {
+            background: #fff;
+            color: #d9534f;
+            font-size: 10px;
+            padding: 1px 6px;
+            border: 1px inset #888;
+            cursor: pointer;
+            margin-right: 6px;
+        }
+
+        .menu-bar {
+            display: flex;
+            background: var(--win-bg);
+            color: var(--win-text);
+            border-bottom: 1px solid var(--win-border-dark);
+            padding: 2px 4px;
+            position: relative;
+        }
+
+        .menu-item {
+            padding: 2px 8px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background: var(--menu-hover-bg);
+            color: var(--menu-hover-text);
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--win-bg);
+            border: 2px solid;
+            border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light);
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+            z-index: 1000;
+            min-width: 180px;
+        }
+
+        .dropdown-item {
+            padding: 5px 12px;
+            color: var(--win-text);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .dropdown-item:hover {
+            background: var(--menu-hover-bg);
+            color: var(--menu-hover-text);
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--win-border-dark);
+            margin: 2px 0;
+        }
+
+        .tab-bar {
+            display: flex;
+            background: var(--tab-bar-bg);
+            padding: 6px 8px 0 8px;
+            border-bottom: 2px solid var(--win-border-dark);
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .tabs-left {
+            display: flex;
+            gap: 3px;
+        }
+
+        .tab-btn {
+            padding: 6px 14px;
+            background: var(--tab-btn-bg);
+            color: var(--tab-btn-text);
+            border: 1px solid var(--win-border-dark);
+            border-bottom: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: normal;
+        }
+
+        .tab-btn.active {
+            background: var(--tab-active-bg);
+            color: var(--tab-active-text);
+            border: 2px solid;
+            border-color: var(--win-border-light) var(--win-border-dark) var(--tab-active-bg) var(--win-border-light);
+            font-weight: bold;
+            margin-bottom: -2px;
+            padding-top: 7px;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.2);
+        }
+
+        .tab-center-title {
+            background: var(--center-title-bg);
+            color: var(--center-title-text);
+            border: 1px inset var(--center-title-border);
+            padding: 3px 10px;
+            font-weight: bold;
+        }
+
+        .main-body {
+            padding: 8px;
+            display: flex;
+            gap: 8px;
+            min-height: 520px;
+        }
+
+        .left-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .phone-lcd {
+            background: var(--lcd-bg);
+            border: 2px inset #ffffff;
+            border-radius: 6px;
+            height: 290px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2);
+            color: var(--lcd-text);
+            transition: height 0.2s;
+        }
+
+        .lcd-top {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            border-bottom: 1px solid currentColor;
+            padding-bottom: 3px;
+            opacity: 0.8;
+        }
+
+        .lcd-content {
+            flex-grow: 1;
+            padding: 8px 0;
+            font-family: 'GulimChe', '굴림체', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .bubble-sent {
+            background: var(--sent-bubble-bg);
+            color: var(--sent-bubble-text);
+            border: 1px solid #dcd391;
+            padding: 6px 10px;
+            border-radius: 4px;
+            align-self: flex-end;
+            max-width: 85%;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+            width: fit-content;
+        }
+
+        .bubble-recv {
+            background: var(--recv-bubble-bg);
+            color: var(--recv-bubble-text);
+            border: 1px solid var(--recv-bubble-border);
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            align-self: flex-start;
+            max-width: 90%;
+            width: fit-content;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            line-height: 1.4;
+        }
+
+        .shake-once {
+            animation: shake 0.45s ease-in-out;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-8px, 5px); }
+            40% { transform: translate(8px, -5px); }
+            60% { transform: translate(-5px, 3px); }
+            80% { transform: translate(5px, -3px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .lcd-bottom {
+            text-align: right;
+            font-size: 11px;
+            color: inherit;
+            opacity: 0.8;
+            border-top: 1px solid currentColor;
+            padding-top: 2px;
+        }
+
+        .input-box {
+            background: #f0f0f0;
+            border: 1px solid #a0a0a0;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .msg-textarea {
+            width: 100%;
+            height: 75px;
+            resize: none;
+            border: 1px inset #fff;
+            padding: 5px;
+            font-family: inherit;
+            color: #000;
+            background: #fff;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .input-row label {
+            width: 80px;
+            font-weight: bold;
+            color: #0a246a;
+        }
+
+        .input-row input, .input-row select {
+            flex-grow: 1;
+            padding: 2px 4px;
+            border: 1px inset #fff;
+            background: #fff;
+            color: #000;
+        }
+
+        .mode-toggle-group {
+            display: flex;
+            gap: 4px;
+            background: #e4e0d8;
+            padding: 2px;
+            border: 1px inset #fff;
+        }
+
+        .mode-radio-btn {
+            flex: 1;
+            padding: 3px 0;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            border: 1px solid #a0a0a0;
+            background: #d4d0c8;
+            color: #333;
+        }
+
+        .mode-radio-btn.active-sent {
+            background: #0a246a;
+            color: #fff;
+            border-color: #000040;
+        }
+
+        .mode-radio-btn.active-recv {
+            background: #880000;
+            color: #fff;
+            border-color: #400000;
+        }
+
+        .btn-mini {
+            padding: 1px 5px;
+            background: var(--win-bg);
+            color: var(--win-text);
+            border: 1px solid;
+            border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .center-section {
+            width: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .panel-box {
+            background: #fff;
+            border: 1px solid var(--win-border-dark);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: var(--panel-header-bg) !important;
+            color: var(--panel-header-text) !important;
+            padding: 3px 6px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .tree-view {
+            padding: 6px;
+            height: 200px;
+            overflow-y: auto;
+            background-color: #ffffff;
+            color: #000;
+        }
+
+        .tree-folder {
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 4px;
+        }
+
+        .tree-item {
+            padding: 2px 4px 2px 10px;
+            cursor: pointer;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tree-item:hover {
+            background: var(--menu-hover-bg);
+            color: var(--menu-hover-text);
+        }
+
+        .symbol-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+            padding: 4px;
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f5f5f5;
+        }
+
+        .symbol-btn {
+            background: #fff;
+            border: 1px solid #a0a0a0;
+            text-align: center;
+            padding: 4px 0;
+            cursor: pointer;
+            font-size: 13px;
+            color: #000;
+        }
+
+        .symbol-btn:hover {
+            background: var(--menu-hover-bg);
+            color: var(--menu-hover-text);
+        }
+
+        .right-section {
+            width: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .status-box {
+            background: #fff;
+            border: 1px inset #fff;
+            padding: 8px;
+            line-height: 1.6;
+            color: #000;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .status-val {
+            font-weight: bold;
+            color: #0000ff;
+        }
+
+        .side-btn {
+            background: var(--side-btn-bg);
+            color: var(--side-btn-text);
+            border: 1px solid;
+            border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light);
+            padding: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .ad-slots-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .custom-ad-slot {
+            background: #ffffff;
+            border: 1px solid #b0b0b0;
+            padding: 4px;
+            height: 95px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            color: #000;
+        }
+
+        .custom-ad-slot img {
+            max-width: 100%;
+            max-height: 85px;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+            transform-origin: center center;
+        }
+
+        .img-control-bar {
+            position: absolute;
+            bottom: 2px;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: none;
+            gap: 3px;
+            z-index: 10;
+        }
+
+        .custom-ad-slot:hover .img-control-bar {
+            display: flex;
+        }
+
+        .img-ctrl-btn {
+            background: #fff;
+            border: none;
+            font-size: 10px;
+            padding: 1px 4px;
+            cursor: pointer;
+            border-radius: 2px;
+            color: #000;
+        }
+
+        .ad-banner {
+            background: #f2f2f2;
+            border: 1px solid #b0b0b0;
+            padding: 8px;
+            margin-top: auto;
+            color: #000;
+        }
+
+        .ad-title {
+            background: var(--panel-header-bg);
+            color: var(--panel-header-text);
+            padding: 2px 4px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        .bottom-actions {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px;
+            background: var(--win-bg);
+            border-top: 1px solid var(--win-border-dark);
+        }
+
+        .action-btn {
+            padding: 6px 18px;
+            background: var(--btn-bg);
+            color: var(--btn-text) !important;
+            border: 2px solid;
+            border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light);
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .action-btn:active {
+            border-color: var(--win-border-dark) var(--win-border-light) var(--win-border-light) var(--win-border-dark);
+            box-shadow: none;
+        }
+
+        .action-btn.primary {
+            color: var(--btn-primary-text) !important;
+        }
+
+        .action-btn.reserve-btn {
+            background: var(--reserve-btn-bg);
+            color: var(--reserve-btn-text) !important;
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .webmail-frame {
+            width: 100%;
+            height: 440px;
+            background: #fff;
+            border: 2px inset #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            gap: 8px;
+            color: #000;
+        }
+
+        .email-form-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+        }
+
+        .email-form-row label {
+            width: 80px;
+            font-weight: bold;
+            color: #0a246a;
+        }
+
+        .email-form-row input {
+            flex-grow: 1;
+            padding: 4px;
+            border: 1px solid #a0a0a0;
+            color: #000;
+            background: #fff;
+        }
+
+        .note-tab-frame {
+            width: 100%;
+            height: 440px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .note-send-box {
+            width: 40%;
+            background: #fff8dc;
+            border: 1px solid #d2b48c;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            color: #000;
+        }
+
+        .note-list-box {
+            width: 60%;
+            background: #fff;
+            border: 1px inset #808080;
+            padding: 8px;
+            overflow-y: auto;
+            color: #000;
+            transition: width 0.2s;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-window {
+            width: 480px;
+            background: var(--win-bg);
+            color: var(--win-text);
+            border: 2px solid;
+            border-color: var(--win-border-light) var(--win-border-dark) var(--win-border-dark) var(--win-border-light);
+            box-shadow: 4px 4px 15px rgba(0,0,0,0.7);
+            padding: 2px;
+        }
+
+        .modal-body {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: #fff;
+            padding: 8px;
+            border: 1px inset #fff;
+            color: #000;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            color: #0a246a;
+        }
+    </style>
+</head>
+<body>
+
+<div class="window" id="mainWindow">
+    <!-- 타이틀 바 -->
+    <div class="title-bar">
+        <div class="title-title">
+            <span id="displayWindowTitle">📱 문자 메신저</span>
+        </div>
+        <div class="title-controls">
+            <button class="sound-btn" id="soundToggleButton" onclick="toggleSound(this)">🔇 소리 OFF</button>
+            <button class="title-btn" onclick="alert('최소화되었습니다.')">_</button>
+            <button class="title-btn" onclick="toggleWindowMaximize()" title="창 크기 조절/복원">🗗</button>
+            <button class="title-btn" onclick="alert('프로그램을 종료할 수 없습니다.')">X</button>
+        </div>
+    </div>
+
+    <!-- 메뉴 바 -->
+    <div class="menu-bar">
+        <div class="menu-item" onclick="toggleMenu('m-file')">파일(F)
+            <div class="dropdown-menu" id="m-file">
+                <div class="dropdown-item" onclick="openPrefModal()">⚙️ 환경 설정</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" onclick="location.reload()">🔄 대화 화면 새로고침</div>
+            </div>
+        </div>
+        <div class="menu-item" onclick="toggleMenu('m-msg')">메시지(M)
+            <div class="dropdown-menu" id="m-msg">
+                <div class="dropdown-item" onclick="switchMainTab('tab-sms')">✉️ 문자 보내기</div>
+                <div class="dropdown-item" onclick="switchMainTab('tab-notes')">📜 비밀 쪽지함</div>
+                <div class="dropdown-item" onclick="switchMainTab('tab-mail')">📧 이메일 작성 및 발송</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" onclick="openSentBoxModal()">📁 보낸 메시지함 열기</div>
+                <div class="dropdown-item" onclick="openReserveBoxModal()">⏰ 예약 발송 설정</div>
+            </div>
+        </div>
+        <div class="menu-item" onclick="toggleMenu('m-tools')">도구(T)
+            <div class="dropdown-menu" id="m-tools">
+                <div class="dropdown-item" onclick="openCustomThemeModal()">🎨 테마 커스텀</div>
+                <div class="dropdown-item" onclick="openGlobalColorModal()">🌓 전체 테마 & 배경색 설정</div>
+                <div class="dropdown-item" onclick="openBgmConfigModal()">🎵 BGM / 벨소리 커스텀</div>
+                <div class="dropdown-item" onclick="openScreenshotModal()">📸 Clean 화면 캡쳐</div>
+            </div>
+        </div>
+        <div class="menu-item" onclick="toggleMenu('m-act')">동작(A)
+            <div class="dropdown-menu" id="m-act">
+                <div class="dropdown-item" onclick="sendSms()">🚀 메시지 기록 실행</div>
+                <div class="dropdown-item" onclick="clearInput()">🧹 작성 내용 초기화</div>
+            </div>
+        </div>
+        <div class="menu-item" onclick="alert('타이틀 정리 및 소리 버튼 캡쳐 제외 기능이 적용되었습니다.')">도움말(H)</div>
+    </div>
+
+    <!-- 탭 바 -->
+    <div class="tab-bar">
+        <div class="tabs-left">
+            <button class="tab-btn active" id="btn-tab-sms" onclick="switchMainTab('tab-sms')">📱 문자메시지</button>
+            <button class="tab-btn" id="btn-tab-notes" onclick="switchMainTab('tab-notes')">✉️ 쪽지</button>
+            <button class="tab-btn" id="btn-tab-mail" onclick="switchMainTab('tab-mail')">📧 메일</button>
+        </div>
+        <div class="tab-center-title">📁 실시간 문자 센터</div>
+    </div>
+
+    <!-- 메인 바디 -->
+    <div class="main-body tab-content active" id="tab-sms">
+        <div class="left-section">
+            <div class="phone-lcd" id="phoneLcdArea">
+                <div class="lcd-top">
+                    <span>📶 SKT 3G</span>
+                    <span id="currentReceiverTitle">👤 대상: 해원</span>
+                </div>
+                <div class="lcd-content" id="lcdScreen">
+                    <div style="font-size:10px; color:inherit; opacity:0.7; text-align:center;">―― 대화 시뮬레이터 준비됨 ――</div>
+                </div>
+                <div class="lcd-bottom">
+                    <span id="byteVal">0</span> / 80 Byte
+                </div>
+            </div>
+
+            <!-- 캡쳐 시 숨겨지는 입력 컨트롤 영역 -->
+            <div class="input-box" id="smsInputBoxArea">
+                <div class="mode-toggle-group">
+                    <div class="mode-radio-btn active-sent" id="btnModeSent" onclick="setSendMode('sent')">📤 내가 보내기 (발신)</div>
+                    <div class="mode-radio-btn" id="btnModeRecv" onclick="setSendMode('recv')">📥 상대방 답장 (수신)</div>
+                </div>
+
+                <textarea class="msg-textarea" id="msgInput" placeholder="메시지 내용을 입력하세요..." oninput="updateByteCount()"></textarea>
+
+                <div class="input-row">
+                    <label>대화 상대:</label>
+                    <select id="receiverSelect" onchange="changeReceiver(this.value)">
+                        <option value="해원">해원</option>
+                        <option value="진혁">진혁</option>
+                    </select>
+                    <button class="btn-mini" onclick="editCurrentReceiverPrompt()" title="현재 이름 수정">✏️ 수정</button>
+                    <button class="btn-mini" onclick="addReceiverPrompt()" title="연락처 추가">➕ 추가</button>
+                    <button class="btn-mini" onclick="deleteCurrentReceiver()" title="연락처 삭제">➖ 삭제</button>
+                </div>
+                <div class="input-row">
+                    <label>내 이름/번호:</label>
+                    <input type="text" id="senderInput" value="해원">
+                </div>
+            </div>
+        </div>
+
+        <div class="center-section">
+            <div class="panel-box">
+                <div class="panel-header emoticon-header">
+                    <span>📁 이모티콘 모음</span>
+                </div>
+                <div class="tree-view" id="emoticonTree">
+                    <div class="tree-folder">📂 할로윈 / 감정 이모티콘</div>
+                    <div class="tree-item" onclick="insertText('┌( ⚡ _ ⚡ )┘')">┌( ⚡ _ ⚡ )┘</div>
+                    <div class="tree-item" onclick="insertText('(┬┬_┬┬)')">(┬┬_┬┬)</div>
+                    <div class="tree-item" onclick="insertText('† ┏┛묘지┗┓ †')">† ┏┛묘지┗┓ †</div>
+                    <div class="tree-item" onclick="insertText('( 🕸️ - _ - 🕸️ )')">( 🕸️ - _ - 🕸️ )</div>
+                    <div class="tree-item" onclick="insertText('┌( 👻 )┘')">┌( 👻 )┘</div>
+                    <div class="tree-item" onclick="insertText('( ☠️ _ ☠️ )')">( ☠️ _ ☠️ )</div>
+                    <div class="tree-item" onclick="insertText('🎃( - _ - )🎃')">🎃( - _ - )🎃</div>
+                    <div class="tree-item" onclick="insertText('👁️_👁️')">👁️_👁️</div>
+                    
+                    <div class="tree-folder" style="margin-top:8px;">📂 템플릿 문구 모음</div>
+                    <div id="diyEmoticonContainer"></div>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header symbol-header">
+                    <span>❖ 특수문자 입력</span>
+                </div>
+                <div class="symbol-grid" id="symbolGrid"></div>
+            </div>
+        </div>
+
+        <div class="right-section">
+            <div class="status-box">
+                <div class="status-row">
+                    <span>남은 무료 문자:</span>
+                    <span class="status-val">663 건</span>
+                </div>
+                <div class="status-row">
+                    <span>도토리 잔액:</span>
+                    <span class="status-val">02 개</span>
+                </div>
+                <div style="font-size:10px; color:#666; margin-top:4px;">
+                    * 20XX년 할로윈 밤 한정 연결
+                </div>
+            </div>
+
+            <button class="side-btn" onclick="openSentBoxModal()">📁 보낸 메시지함</button>
+
+            <!-- 광고 이미지 슬롯 1, 2 -->
+            <div class="ad-slots-wrapper">
+                <div class="custom-ad-slot" id="customAdSlot1">
+                    <img id="adImg1" src="" alt="" style="display:none;">
+                    <div style="color:#666; font-size:11px;" id="adSlotText1">🎃 이미지 슬롯 1</div>
+                    <div class="img-control-bar">
+                        <button class="img-ctrl-btn" onclick="zoomImg(1, 0.2)">🔍+</button>
+                        <button class="img-ctrl-btn" onclick="zoomImg(1, -0.2)">🔍-</button>
+                        <button class="img-ctrl-btn" onclick="rotateImg(1)">🔄</button>
+                        <button class="img-ctrl-btn" onclick="resetImg(1)">↺</button>
+                    </div>
+                </div>
+
+                <div class="custom-ad-slot" id="customAdSlot2">
+                    <img id="adImg2" src="" alt="" style="display:none;">
+                    <div style="color:#666; font-size:11px;" id="adSlotText2">🎃 이미지 슬롯 2</div>
+                    <div class="img-control-bar">
+                        <button class="img-ctrl-btn" onclick="zoomImg(2, 0.2)">🔍+</button>
+                        <button class="img-ctrl-btn" onclick="zoomImg(2, -0.2)">🔍-</button>
+                        <button class="img-ctrl-btn" onclick="rotateImg(2)">🔄</button>
+                        <button class="img-ctrl-btn" onclick="resetImg(2)">↺</button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-mini" style="width:100%;" onclick="openAdConfigModal()">🖼️ 광고/이미지 변경 (ON/OFF)</button>
+
+            <div class="ad-banner" id="bgmBannerBox">
+                <div class="ad-title" id="bgmBannerTitle">🎵 20XX 최신 벨소리 / BGM</div>
+                <div style="line-height:1.3; font-size:11px;">
+                    <b id="bgmBannerDesc">[할로윈 특가] '밤의 오르골' 다운로드!</b><br>
+                    <a href="https://cyworld.com" id="bgmBannerLink" target="_blank" style="color:#0000ff;">[미니홈피 BGM 선물하기]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 탭 2: 쪽지 -->
+    <div class="main-body tab-content" id="tab-notes">
+        <div class="note-tab-frame">
+            <div class="note-send-box" id="noteSendBoxArea">
+                <h4 style="margin:0 0 6px 0; color:#880000;">✉️ 비밀 쪽지 작성</h4>
+                <div class="mode-toggle-group" style="margin-bottom:4px;">
+                    <div class="mode-radio-btn active-sent" id="btnNoteSent" onclick="setNoteMode('sent')">보내기</div>
+                    <div class="mode-radio-btn" id="btnNoteRecv" onclick="setNoteMode('recv')">받기</div>
+                </div>
+                <label>대화 상대 선택:</label>
+                <div style="display:flex; gap:3px;">
+                    <select id="noteReceiverSelect" style="flex:1;" onchange="changeReceiver(this.value)"></select>
+                    <button class="btn-mini" onclick="editCurrentReceiverPrompt()" title="수정">✏️</button>
+                    <button class="btn-mini" onclick="addReceiverPrompt()" title="추가">➕</button>
+                    <button class="btn-mini" onclick="deleteCurrentReceiver()" title="삭제">➖</button>
+                </div>
+                <label style="margin-top:6px;">쪽지 내용:</label>
+                <textarea id="noteSendInput" style="flex-grow:1; resize:none; padding:6px; border:1px solid #cca152;" placeholder="전할 비밀 쪽지를 적으세요..."></textarea>
+                <button class="action-btn primary" onclick="sendNote()">📜 쪽지 등록하기</button>
+            </div>
+            <div class="note-list-box" id="noteListBoxArea">
+                <div style="font-weight:bold; color:#880000; border-bottom:1px solid #ccc; padding-bottom:4px; margin-bottom:6px;">
+                    <span>📜 기록된 비밀 쪽지함</span>
+                </div>
+                <div id="noteHistoryList">
+                    <div style="color:#888; font-size:11px;">(작성된 쪽지가 여기에 보관됩니다)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 탭 3: 메일 (직접 발송 연출) -->
+    <div class="main-body tab-content" id="tab-mail">
+        <div class="webmail-frame">
+            <div style="background:var(--menu-hover-bg); color:var(--menu-hover-text); padding:6px; font-weight:bold; display:flex; justify-content:space-between;">
+                <span>📧 20XX 레트로 웹메일 발송기</span>
+                <span style="font-size:10px; font-weight:normal;">Direct Transmit</span>
+            </div>
+            <div class="email-form-row">
+                <label>보내는 사람:</label>
+                <input type="text" id="emailSender" value="myemail@domain.com">
+            </div>
+            <div class="email-form-row">
+                <label>받는 사람:</label>
+                <input type="text" id="emailReceiver" placeholder="수신 메일 주소 (예: target@naver.com)">
+            </div>
+            <div class="email-form-row">
+                <label>메일 제목:</label>
+                <input type="text" id="emailSubject" placeholder="이메일 제목을 입력하세요...">
+            </div>
+            <textarea id="emailBody" style="flex-grow:1; padding:8px; border:1px solid #a0a0a0; resize:none;" placeholder="이메일 본문을 작성하세요..."></textarea>
+            
+            <div id="emailProgressArea" style="display:none; margin:4px 0;">
+                <div style="font-size:10px; color:#0a246a; margin-bottom:2px;" id="emailProgressText">서버 연결 중...</div>
+                <div style="width:100%; background:#eee; height:12px; border:1px solid #888;">
+                    <div id="emailProgressBar" style="width:0%; height:100%; background:#0a246a; transition:width 0.2s;"></div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span id="emailStatusText" style="color:#666; font-size:11px;">발송 준비 완료</span>
+                <button class="action-btn primary" onclick="sendRealEmail()">📨 이메일 바로 발송</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 하단 액션 버튼들 (캡쳐 시 숨김 영역) -->
+    <div class="bottom-actions" id="bottomActionsContainer">
+        <button class="action-btn primary" onclick="sendSms()">✉️ 보내기</button>
+        <button class="action-btn reserve-btn" onclick="openReserveBoxModal()">⏰ 예약 발송 설정</button>
+        <button class="action-btn" onclick="clearInput()">🔄 다시작성</button>
+        <button class="action-btn" onclick="alert('작성이 취소되었습니다.')">🚫 취소</button>
+    </div>
+</div>
+
+<!-- 환경 설정 모달 -->
+<div class="modal-overlay" id="prefModal">
+    <div class="modal-window" style="width:380px;">
+        <div class="title-bar">
+            <span>⚙️ 환경 설정</span>
+            <button class="title-btn" onclick="closeModal('prefModal')">X</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group" style="background:#fff0f0; border-color:#d9534f;">
+                <label style="color:#d9534f;">🗑️ 대화 기록 전체 초기화</label>
+                <p style="margin:2px 0 6px 0; color:#666;">화면에 기록된 모든 대화 내역을 깨끗이 지웁니다.</p>
+                <button class="action-btn" style="background:#ffdddd; color:#880000; font-weight:bold;" onclick="clearAllChatData()">🔥 모든 대화 내역 완전히 삭제</button>
+            </div>
+            <button class="action-btn primary" onclick="closeModal('prefModal')">확인</button>
+        </div>
+    </div>
+</div>
+
+<!-- 테마 커스텀 모달 -->
+<div class="modal-overlay" id="customThemeModal">
+    <div class="modal-window" style="width:480px;">
+        <div class="title-bar">
+            <span>🎨 테마 커스텀</span>
+            <button class="title-btn" onclick="closeModal('customThemeModal')">X</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>❖ 특수문자 목록 커스텀 (공백 구분)</label>
+                <input type="text" id="customSymbolsInput" value="▲ ▼ ★ ☆ ♨ ☎ ☣ 👻 🎃 ➕ 🕯️ 🕸️ ☠️ 🩸 ♠ ♣ ♥ ♦ ⬛ ⬜">
+            </div>
+
+            <div class="form-group">
+                <label>💬 템플릿 문구 목록 커스텀</label>
+                <div style="display:flex; gap:4px; margin-bottom:4px;">
+                    <input type="text" id="newDiyInput" placeholder="추가할 문장..." style="flex:1; padding:4px;">
+                    <button class="action-btn primary" onclick="addDiySentence()">추가</button>
+                </div>
+                <div id="diyListManager" style="max-height:130px; overflow-y:auto; border:1px solid #ccc; padding:4px; background:#fff;"></div>
+            </div>
+
+            <button class="action-btn primary" style="width:100%;" onclick="applyThemeCustomSettings()">저장 및 적용</button>
+        </div>
+    </div>
+</div>
+
+<!-- 전체 테마 설정 모달 -->
+<div class="modal-overlay" id="globalColorModal">
+    <div class="modal-window" style="width:420px;">
+        <div class="title-bar">
+            <span>🌓 전체 테마 & 배경색 설정</span>
+            <button class="title-btn" onclick="closeModal('globalColorModal')">X</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>🎨 프리셋 테마 선택:</label>
+                <select id="themePresetSelect" onchange="changeThemePreset(this.value)">
+                    <option value="dark">🌑 다크 호러 (기본)</option>
+                    <option value="classic">🖥️ 윈도우 98 레트로 클래식</option>
+                    <option value="crimson">🩸 크림슨 블러드 (선명 보정)</option>
+                    <option value="gothic">🔮 고딕 퍼플</option>
+                    <option value="cyber">☣️ 사이버 펑크 그린</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>🖌️ 세부 색상 개별 지정</label>
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span>바탕 화면 배경색:</span>
+                    <input type="color" id="bgColorPicker" value="#0b0914" onchange="applyCustomColors()">
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span>메신저 창 바탕색:</span>
+                    <input type="color" id="winBgColorPicker" value="#d4d0c8" onchange="applyCustomColors()">
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span>송신 말풍선 색상:</span>
+                    <input type="color" id="sentBgColorPicker" value="#fef8cc" onchange="applyCustomColors()">
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span>수신 말풍선 색상:</span>
+                    <input type="color" id="recvBgColorPicker" value="#4a0000" onchange="applyCustomColors()">
+                </div>
+            </div>
+
+            <button class="action-btn primary" onclick="closeModal('globalColorModal')">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- BGM 배너 모달 -->
+<div class="modal-overlay" id="bgmConfigModal">
+    <div class="modal-window" style="width:400px;">
+        <div class="title-bar">
+            <span>🎵 벨소리 / BGM 배너 커스텀</span>
+            <button class="title-btn" onclick="closeModal('bgmConfigModal')">X</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>배너 상단 제목:</label>
+                <input type="text" id="bgmTitleInput" value="🎵 20XX 최신 벨소리 / BGM">
+            </div>
+            <div class="form-group">
+                <label>설명 문구:</label>
+                <input type="text" id="bgmDescInput" value="[할로윈 특가] '밤의 오르골' 다운로드!">
+            </div>
+            <div class="form-group">
+                <label>링크 텍스트:</label>
+                <input type="text" id="bgmLinkTextInput" value="[미니홈피 BGM 선물하기]">
+            </div>
+            <div class="form-group">
+                <label>이동 URL 주소:</label>
+                <input type="text" id="bgmUrlInput" value="https://cyworld.com">
+            </div>
+            <button class="action-btn primary" onclick="applyBgmConfig()">적용</button>
+        </div>
+    </div>
+</div>
+
+<!-- 광고 이미지 ON/OFF 모달 -->
+<div class="modal-overlay" id="adConfigModal">
+    <div class="modal-window" style="width:440px;">
+        <div class="title-bar">
+            <span>🖼️ 광고/이미지 슬롯 설정 (개별 ON / OFF)</span>
+            <button class="title-btn" onclick="closeModal('adConfigModal')">X</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label>🖼️ 이미지 슬롯 1 설정</label>
+                    <label style="cursor:pointer; color:#0a246a;"><input type="checkbox" id="adSlotToggle1" checked> 슬롯 1 사용 (ON)</label>
+                </div>
+                <input type="file" id="localAdFileInput1" accept="image/*">
+                <input type="text" id="adUrlInput1" placeholder="또는 URL 입력...">
+            </div>
+
+            <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label>🖼️ 이미지 슬롯 2 설정</label>
+                    <label style="cursor:pointer; color:#0a246a;"><input type="checkbox" id="adSlotToggle2" checked> 슬롯 2 사용 (ON)</label>
+                </div>
+                <input type="file" id="localAdFileInput2" accept="image/*">
+                <input type="text" id="adUrlInput2" placeholder="또는 URL 입력...">
+            </div>
+
+            <button class="action-btn primary" onclick="applyAdConfig()">설정 및 슬롯 반영</button>
+        </div>
+    </div>
+</div>
+
+<!-- Clean 캡쳐 모달 -->
+<div class="modal-overlay" id="screenshotModal">
+    <div class="modal-window" style="width:400px;">
+        <div class="title-bar">
+            <span>📸 Clean 화면 캡쳐 & PNG 다운로드</span>
+            <button class="title-btn" onclick="closeModal('screenshotModal')">X</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>🏷️ Output 창 이름 지정:</label>
+                <input type="text" id="customCaptureTitleInput" value="📱 문자 메신저">
+            </div>
+            <button class="action-btn primary" onclick="takeCleanScreenshot()">📷 Clean PNG 캡쳐 실행</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="sentBoxModal">
+    <div class="modal-window">
+        <div class="title-bar">
+            <span>📁 보낸 메시지함</span>
+            <button class="title-btn" onclick="closeModal('sentBoxModal')">X</button>
+        </div>
+        <div class="modal-body">
+            <div style="background:#fff; border:1px inset #fff; height:250px; overflow-y:auto; padding:8px;" id="sentBoxList"></div>
+            <button class="action-btn" onclick="closeModal('sentBoxModal')">닫기</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="reserveBoxModal">
+    <div class="modal-window">
+        <div class="title-bar">
+            <span>⏰ 예약 문자 발송 설정</span>
+            <button class="title-btn" onclick="closeModal('reserveBoxModal')">X</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>⏱️ 예약 시간 선택</label>
+                <select id="reserveTimeSelect">
+                    <option value="5">5초 후 발송</option>
+                    <option value="10">10초 후 발송</option>
+                    <option value="30">30초 후 발송</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>📝 예약 문자 내용</label>
+                <textarea id="reserveMsgInput" style="height:60px; resize:none;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>📜 예약 대기 목록</label>
+                <div style="height:90px; overflow-y:auto; padding:6px; background:#fff;" id="reserveQueueList"></div>
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button class="action-btn primary" style="flex:1;" onclick="addReservation()">등록</button>
+                <button class="action-btn" onclick="closeModal('reserveBoxModal')">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let soundEnabled = false;
+    let currentSendMode = 'sent'; // 'sent' 또는 'recv'
+    let currentNoteMode = 'sent';
+
+    let diyAnswers = ["┌( ⚡ _ ⚡ )┘", "(┬┬_┬┬)", "† ┏┛묘지┗┓ †", "( 🕸️ - _ - 🕸️ )"];
+    let sentHistory = [];
+    let reserveQueue = [];
+
+    let imgState = {
+        1: { scale: 1, rotate: 0 },
+        2: { scale: 1, rotate: 0 }
+    };
+
+    let receiverData = {
+        "해원": [],
+        "진혁": []
+    };
+    let currentReceiver = "해원";
+
+    let symbolList = ["▲", "▼", "★", "☆", "♨", "☎", "☣", "👻", "🎃", "➕", "🕯️", "🕸️", "☠️", "🩸", "♠", "♣", "♥", "♦", "⬛", "⬜"];
+
+    window.onload = function() {
+        renderSymbols();
+        updateDiyEmoticonsUI();
+        updateReceiverSelectUI();
+        renderDiyManagerUI();
+        renderLcdForCurrentReceiver();
+    };
+
+    function setSendMode(mode) {
+        currentSendMode = mode;
+        const btnSent = document.getElementById('btnModeSent');
+        const btnRecv = document.getElementById('btnModeRecv');
+
+        if(mode === 'sent') {
+            btnSent.className = 'mode-radio-btn active-sent';
+            btnRecv.className = 'mode-radio-btn';
+        } else {
+            btnSent.className = 'mode-radio-btn';
+            btnRecv.className = 'mode-radio-btn active-recv';
+        }
+    }
+
+    function setNoteMode(mode) {
+        currentNoteMode = mode;
+        const btnSent = document.getElementById('btnNoteSent');
+        const btnRecv = document.getElementById('btnNoteRecv');
+
+        if(mode === 'sent') {
+            btnSent.className = 'mode-radio-btn active-sent';
+            btnRecv.className = 'mode-radio-btn';
+        } else {
+            btnSent.className = 'mode-radio-btn';
+            btnRecv.className = 'mode-radio-btn active-recv';
+        }
+    }
+
+    function toggleWindowMaximize() {
+        document.getElementById('mainWindow').classList.toggle('maximized');
+    }
+
+    function sendSms() {
+        const msg = document.getElementById('msgInput').value.trim();
+        if(!msg) {
+            alert('전송할 메시지 내용을 입력하세요.');
+            return;
+        }
+
+        const msgData = {
+            id: Date.now(),
+            type: currentSendMode,
+            receiver: currentReceiver,
+            text: msg
+        };
+
+        if(!receiverData[currentReceiver]) {
+            receiverData[currentReceiver] = [];
+        }
+        receiverData[currentReceiver].push(msgData);
+
+        if(currentSendMode === 'sent') {
+            sentHistory.push({ time: new Date().toLocaleTimeString(), receiver: currentReceiver, msg: msg });
+            updateSentBoxUI();
+        } else {
+            if(soundEnabled) playSpookySound();
+            const win = document.getElementById('mainWindow');
+            win.classList.add('shake-once');
+            setTimeout(() => win.classList.remove('shake-once'), 450);
+        }
+
+        renderLcdForCurrentReceiver();
+        clearInput();
+    }
+
+    function renderSymbols() {
+        const grid = document.getElementById('symbolGrid');
+        grid.innerHTML = '';
+        symbolList.forEach(s => {
+            const btn = document.createElement('div');
+            btn.className = 'symbol-btn';
+            btn.innerText = s;
+            btn.onclick = () => insertText(s);
+            grid.appendChild(btn);
+        });
+    }
+
+    function insertText(str) {
+        const input = document.getElementById('msgInput');
+        input.value += str;
+        updateByteCount();
+    }
+
+    function updateByteCount() {
+        const txt = document.getElementById('msgInput').value;
+        document.getElementById('byteVal').innerText = txt.length * 2;
+    }
+
+    function clearInput() {
+        document.getElementById('msgInput').value = '';
+        updateByteCount();
+    }
+
+    function updateReceiverSelectUI() {
+        const sel = document.getElementById('receiverSelect');
+        const noteSel = document.getElementById('noteReceiverSelect');
+
+        sel.innerHTML = ''; noteSel.innerHTML = '';
+
+        Object.keys(receiverData).forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r; opt.innerText = r;
+            if(r === currentReceiver) opt.selected = true;
+            sel.appendChild(opt);
+
+            const opt2 = document.createElement('option');
+            opt2.value = r; opt2.innerText = r;
+            if(r === currentReceiver) opt2.selected = true;
+            noteSel.appendChild(opt2);
+        });
+
+        document.getElementById('currentReceiverTitle').innerText = `👤 대상: ${currentReceiver}`;
+    }
+
+    function changeReceiver(val) {
+        currentReceiver = val;
+        updateReceiverSelectUI();
+        renderLcdForCurrentReceiver();
+    }
+
+    function editCurrentReceiverPrompt() {
+        const newName = prompt("변경할 대화 상대 이름을 입력하세요:", currentReceiver);
+        if(!newName || newName.trim() === "" || newName === currentReceiver) return;
+
+        const trimmedName = newName.trim();
+        
+        receiverData[trimmedName] = receiverData[currentReceiver] || [];
+        delete receiverData[currentReceiver];
+        
+        currentReceiver = trimmedName;
+        updateReceiverSelectUI();
+        renderLcdForCurrentReceiver();
+        alert('대화 상대 이름이 변경되었습니다.');
+    }
+
+    function addReceiverPrompt() {
+        const name = prompt("새로운 대화 상대 이름을 입력하세요:");
+        if(!name || name.trim() === "") return;
+        const key = name.trim();
+        if(!receiverData[key]) {
+            receiverData[key] = [];
+            currentReceiver = key;
+            updateReceiverSelectUI();
+            renderLcdForCurrentReceiver();
+        }
+    }
+
+    function deleteCurrentReceiver() {
+        const keys = Object.keys(receiverData);
+        if(keys.length <= 1) {
+            alert('최소 하나의 연락처는 유지되어야 합니다.');
+            return;
+        }
+        delete receiverData[currentReceiver];
+        currentReceiver = Object.keys(receiverData)[0];
+        updateReceiverSelectUI();
+        renderLcdForCurrentReceiver();
+    }
+
+    function renderLcdForCurrentReceiver() {
+        const lcd = document.getElementById('lcdScreen');
+        lcd.innerHTML = '<div style="font-size:10px; color:inherit; opacity:0.7; text-align:center;">―― 대화 기록 ――</div>';
+        
+        const history = receiverData[currentReceiver] || [];
+        history.forEach(item => {
+            const bubble = document.createElement('div');
+            bubble.className = item.type === 'sent' ? 'bubble-sent' : 'bubble-recv';
+            bubble.innerText = item.text;
+            lcd.appendChild(bubble);
+        });
+        lcd.scrollTop = lcd.scrollHeight;
+    }
+
+    function clearAllChatData() {
+        if(confirm("모든 대화 내역을 초기화하시겠습니까?")) {
+            Object.keys(receiverData).forEach(k => receiverData[k] = []);
+            sentHistory = [];
+            renderLcdForCurrentReceiver();
+            closeModal('prefModal');
+            alert('대화 기록이 완전히 삭제되었습니다.');
+        }
+    }
+
+    function toggleMenu(menuId) {
+        const target = document.getElementById(menuId);
+        const isVisible = target.style.display === 'block';
+        closeAllMenus();
+        if(!isVisible) target.style.display = 'block';
+    }
+
+    function closeAllMenus() {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+    }
+
+    window.onclick = function(e) {
+        if(!e.target.matches('.menu-item') && !e.target.matches('.menu-item *')) {
+            closeAllMenus();
+        }
+    };
+
+    function switchMainTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        document.getElementById(tabId).classList.add('active');
+        
+        const btnMap = {
+            'tab-sms': 'btn-tab-sms',
+            'tab-notes': 'btn-tab-notes',
+            'tab-mail': 'btn-tab-mail'
+        };
+        if(btnMap[tabId]) document.getElementById(btnMap[tabId]).classList.add('active');
+
+        closeAllMenus();
+    }
+
+    function playSpookySound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(140, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.8);
+            gain.gain.setValueAtTime(0.25, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.8);
+        } catch(e) {}
+    }
+
+    function toggleSound(btn) {
+        soundEnabled = !soundEnabled;
+        btn.innerText = soundEnabled ? '🔊 소리 ON' : '🔇 소리 OFF';
+        btn.style.color = soundEnabled ? '#008000' : '#d9534f';
+    }
+
+    function updateDiyEmoticonsUI() {
+        const container = document.getElementById('diyEmoticonContainer');
+        container.innerHTML = '';
+        diyAnswers.forEach(ans => {
+            const item = document.createElement('div');
+            item.className = 'tree-item';
+            item.innerText = `💬 ${ans}`;
+            item.onclick = () => insertText(ans);
+            container.appendChild(item);
+        });
+    }
+
+    function sendRealEmail() {
+        const receiver = document.getElementById('emailReceiver').value.trim();
+        const subject = document.getElementById('emailSubject').value.trim();
+        const body = document.getElementById('emailBody').value.trim();
+
+        if(!receiver || !subject || !body) {
+            alert('받는 사람 주소, 제목, 본문을 모두 입력해 주세요.');
+            return;
+        }
+
+        const pArea = document.getElementById('emailProgressArea');
+        const pBar = document.getElementById('emailProgressBar');
+        const pText = document.getElementById('emailProgressText');
+        const statusText = document.getElementById('emailStatusText');
+
+        pArea.style.display = 'block';
+        pBar.style.width = '10%';
+        pText.innerText = '메일 서버 연결 중...';
+        statusText.innerText = '전송 중...';
+
+        setTimeout(() => {
+            pBar.style.width = '60%';
+            pText.innerText = '데이터 패킷 전송 중...';
+        }, 500);
+
+        setTimeout(() => {
+            pBar.style.width = '100%';
+            pText.innerText = '전송 완료!';
+            statusText.innerText = `✅ [${receiver}] 주소로 발송 완료되었습니다.`;
+            alert(`이메일 발송 완료!\n받는사람: ${receiver}\n제목: ${subject}`);
+            
+            document.getElementById('emailSubject').value = '';
+            document.getElementById('emailBody').value = '';
+
+            setTimeout(() => { pArea.style.display = 'none'; }, 2000);
+        }, 1200);
+    }
+
+    function sendNote() {
+        const rec = document.getElementById('noteReceiverSelect').value;
+        const content = document.getElementById('noteSendInput').value.trim();
+
+        if(!content) {
+            alert('쪽지 내용을 작성해 주세요.');
+            return;
+        }
+
+        const noteContainer = document.getElementById('noteHistoryList');
+        const noteItem = document.createElement('div');
+        noteItem.style.cssText = `padding:6px; border-bottom:1px solid #ccc; margin-bottom:4px; background:${currentNoteMode === 'recv' ? '#fff0f0' : '#fefefe'};`;
+        noteItem.innerHTML = `
+            <div style="font-weight:bold; color:${currentNoteMode === 'recv' ? '#880000' : '#0a246a'};">
+                ${currentNoteMode === 'recv' ? '📩 [수신 쪽지]' : '📤 [발신 쪽지]'} (상대: ${rec})
+            </div>
+            <div style="margin-top:2px; color:#333;">"${content}"</div>
+        `;
+        noteContainer.prepend(noteItem);
+
+        document.getElementById('noteSendInput').value = '';
+        alert('비밀 쪽지가 기록되었습니다.');
+    }
+
+    function openAdConfigModal() { document.getElementById('adConfigModal').style.display = 'flex'; closeAllMenus(); }
+
+    function applyAdConfig() {
+        const show1 = document.getElementById('adSlotToggle1').checked;
+        const show2 = document.getElementById('adSlotToggle2').checked;
+
+        const slot1 = document.getElementById('customAdSlot1');
+        const slot2 = document.getElementById('customAdSlot2');
+
+        slot1.style.display = show1 ? 'flex' : 'none';
+        slot2.style.display = show2 ? 'flex' : 'none';
+
+        if(show1) {
+            const f1 = document.getElementById('localAdFileInput1').files[0];
+            const url1 = document.getElementById('adUrlInput1').value.trim();
+            if(f1) {
+                const r1 = new FileReader();
+                r1.onload = (e) => setAdImgSrc(1, e.target.result);
+                r1.readAsDataURL(f1);
+            } else if(url1) {
+                setAdImgSrc(1, url1);
+            }
+        }
+
+        if(show2) {
+            const f2 = document.getElementById('localAdFileInput2').files[0];
+            const url2 = document.getElementById('adUrlInput2').value.trim();
+            if(f2) {
+                const r2 = new FileReader();
+                r2.onload = (e) => setAdImgSrc(2, e.target.result);
+                r2.readAsDataURL(f2);
+            } else if(url2) {
+                setAdImgSrc(2, url2);
+            }
+        }
+
+        closeModal('adConfigModal');
+        alert('광고/이미지 슬롯 설정이 완료되었습니다.');
+    }
+
+    function setAdImgSrc(slotIdx, src) {
+        const img = document.getElementById(`adImg${slotIdx}`);
+        const text = document.getElementById(`adSlotText${slotIdx}`);
+        img.src = src;
+        img.style.display = 'block';
+        text.style.display = 'none';
+        resetImg(slotIdx);
+    }
+
+    function zoomImg(slotIdx, delta) {
+        imgState[slotIdx].scale = Math.max(0.4, Math.min(3.0, imgState[slotIdx].scale + delta));
+        updateImgTransform(slotIdx);
+    }
+
+    function rotateImg(slotIdx) {
+        imgState[slotIdx].rotate = (imgState[slotIdx].rotate + 90) % 360;
+        updateImgTransform(slotIdx);
+    }
+
+    function resetImg(slotIdx) {
+        imgState[slotIdx] = { scale: 1, rotate: 0 };
+        updateImgTransform(slotIdx);
+    }
+
+    function updateImgTransform(slotIdx) {
+        const img = document.getElementById(`adImg${slotIdx}`);
+        if(img) {
+            img.style.transform = `scale(${imgState[slotIdx].scale}) rotate(${imgState[slotIdx].rotate}deg)`;
+        }
+    }
+
+    function openBgmConfigModal() { document.getElementById('bgmConfigModal').style.display = 'flex'; closeAllMenus(); }
+
+    function applyBgmConfig() {
+        const title = document.getElementById('bgmTitleInput').value.trim();
+        const desc = document.getElementById('bgmDescInput').value.trim();
+        const linkText = document.getElementById('bgmLinkTextInput').value.trim();
+        const url = document.getElementById('bgmUrlInput').value.trim();
+
+        if(title) document.getElementById('bgmBannerTitle').innerText = title;
+        if(desc) document.getElementById('bgmBannerDesc').innerText = desc;
+        
+        const linkEl = document.getElementById('bgmBannerLink');
+        if(linkText) linkEl.innerText = linkText;
+        if(url) linkEl.href = url;
+
+        closeModal('bgmConfigModal');
+        alert('BGM / 벨소리 커스텀 설정이 적용되었습니다.');
+    }
+
+    function openPrefModal() { document.getElementById('prefModal').style.display = 'flex'; closeAllMenus(); }
+    function openCustomThemeModal() { document.getElementById('customThemeModal').style.display = 'flex'; closeAllMenus(); }
+    function openGlobalColorModal() { document.getElementById('globalColorModal').style.display = 'flex'; closeAllMenus(); }
+    function openScreenshotModal() { document.getElementById('screenshotModal').style.display = 'flex'; closeAllMenus(); }
+    function openSentBoxModal() { document.getElementById('sentBoxModal').style.display = 'flex'; closeAllMenus(); }
+    function openReserveBoxModal() { document.getElementById('reserveBoxModal').style.display = 'flex'; closeAllMenus(); }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function renderDiyManagerUI() {
+        const mgr = document.getElementById('diyListManager');
+        mgr.innerHTML = '';
+        diyAnswers.forEach((ans, idx) => {
+            const item = document.createElement('div');
+            item.style.cssText = "display:flex; justify-content:space-between; padding:3px; border-bottom:1px solid #eee; align-items:center;";
+            item.innerHTML = `
+                <span>💬 ${ans}</span>
+                <button class="btn-mini" onclick="removeDiySentence(${idx})">삭제</button>
+            `;
+            mgr.appendChild(item);
+        });
+    }
+
+    function addDiySentence() {
+        const val = document.getElementById('newDiyInput').value.trim();
+        if(!val) return;
+        diyAnswers.push(val);
+        document.getElementById('newDiyInput').value = '';
+        renderDiyManagerUI();
+        updateDiyEmoticonsUI();
+    }
+
+    function removeDiySentence(idx) {
+        diyAnswers.splice(idx, 1);
+        renderDiyManagerUI();
+        updateDiyEmoticonsUI();
+    }
+
+    function applyThemeCustomSettings() {
+        const symVal = document.getElementById('customSymbolsInput').value;
+        symbolList = symVal.split(' ').filter(s => s);
+        renderSymbols();
+        closeModal('customThemeModal');
+        alert('테마 커스텀 설정이 적용되었습니다.');
+    }
+
+    function changeThemePreset(preset) {
+        const root = document.documentElement;
+        if(preset === 'dark') {
+            root.style.setProperty('--bg-color', '#0b0914');
+            root.style.setProperty('--win-bg', '#d4d0c8');
+            root.style.setProperty('--win-border-light', '#ffffff');
+            root.style.setProperty('--win-border-dark', '#404040');
+            root.style.setProperty('--win-text', '#000000');
+            root.style.setProperty('--title-bg', 'linear-gradient(90deg, #0a246a, #a6caf0)');
+            root.style.setProperty('--title-text', '#ffffff');
+            root.style.setProperty('--menu-hover-bg', '#0a246a');
+            root.style.setProperty('--menu-hover-text', '#ffffff');
+            root.style.setProperty('--tab-bar-bg', '#b0ac9a');
+            root.style.setProperty('--tab-btn-bg', '#d4d0c8');
+            root.style.setProperty('--tab-btn-text', '#333333');
+            root.style.setProperty('--tab-active-bg', '#d4d0c8');
+            root.style.setProperty('--tab-active-text', '#0a246a');
+            root.style.setProperty('--center-title-bg', '#ffffff');
+            root.style.setProperty('--center-title-text', '#880000');
+            root.style.setProperty('--lcd-bg', '#e2ede9');
+            root.style.setProperty('--lcd-text', '#0d2818');
+            root.style.setProperty('--panel-header-bg', '#0a246a');
+            root.style.setProperty('--panel-header-text', '#ffffff');
+            root.style.setProperty('--side-btn-bg', '#d4d0c8');
+            root.style.setProperty('--side-btn-text', '#000000');
+            root.style.setProperty('--btn-bg', '#d4d0c8');
+            root.style.setProperty('--btn-text', '#000000');
+            root.style.setProperty('--btn-primary-text', '#000080');
+            root.style.setProperty('--reserve-btn-bg', '#fff8dc');
+            root.style.setProperty('--reserve-btn-text', '#000000');
+            root.style.setProperty('--sent-bubble-bg', '#fef8cc');
+            root.style.setProperty('--recv-bubble-bg', '#4a0000');
+            root.style.setProperty('--recv-bubble-text', '#ffdddd');
+        } else if(preset === 'classic') {
+            root.style.setProperty('--bg-color', '#008080');
+            root.style.setProperty('--win-bg', '#d4d0c8');
+            root.style.setProperty('--win-border-light', '#ffffff');
+            root.style.setProperty('--win-border-dark', '#404040');
+            root.style.setProperty('--win-text', '#000000');
+            root.style.setProperty('--title-bg', 'linear-gradient(90deg, #000080, #1084d0)');
+            root.style.setProperty('--title-text', '#ffffff');
+            root.style.setProperty('--menu-hover-bg', '#000080');
+            root.style.setProperty('--menu-hover-text', '#ffffff');
+            root.style.setProperty('--tab-bar-bg', '#b0ac9a');
+            root.style.setProperty('--tab-btn-bg', '#d4d0c8');
+            root.style.setProperty('--tab-btn-text', '#000000');
+            root.style.setProperty('--tab-active-bg', '#d4d0c8');
+            root.style.setProperty('--tab-active-text', '#000080');
+            root.style.setProperty('--center-title-bg', '#ffffff');
+            root.style.setProperty('--center-title-text', '#000080');
+            root.style.setProperty('--lcd-bg', '#ffffff');
+            root.style.setProperty('--lcd-text', '#000000');
+            root.style.setProperty('--panel-header-bg', '#000080');
+            root.style.setProperty('--panel-header-text', '#ffffff');
+            root.style.setProperty('--side-btn-bg', '#d4d0c8');
+            root.style.setProperty('--side-btn-text', '#000000');
+            root.style.setProperty('--btn-bg', '#d4d0c8');
+            root.style.setProperty('--btn-text', '#000000');
+            root.style.setProperty('--btn-primary-text', '#000080');
+            root.style.setProperty('--reserve-btn-bg', '#fff8dc');
+            root.style.setProperty('--reserve-btn-text', '#000000');
+            root.style.setProperty('--sent-bubble-bg', '#ffffff');
+            root.style.setProperty('--recv-bubble-bg', '#000080');
+            root.style.setProperty('--recv-bubble-text', '#ffffff');
+        } else if(preset === 'crimson') {
+            root.style.setProperty('--bg-color', '#2b0000');
+            root.style.setProperty('--win-bg', '#3a1a1a');
+            root.style.setProperty('--win-border-light', '#6e3030');
+            root.style.setProperty('--win-border-dark', '#1a0505');
+            root.style.setProperty('--win-text', '#ffffff');
+            root.style.setProperty('--title-bg', 'linear-gradient(90deg, #800000, #b30000)');
+            root.style.setProperty('--title-text', '#ffffff');
+            root.style.setProperty('--menu-hover-bg', '#800000');
+            root.style.setProperty('--menu-hover-text', '#ffffff');
+            root.style.setProperty('--tab-bar-bg', '#260a0a');
+            root.style.setProperty('--tab-btn-bg', '#3a1a1a');
+            root.style.setProperty('--tab-btn-text', '#ffaaaa');
+            root.style.setProperty('--tab-active-bg', '#3a1a1a');
+            root.style.setProperty('--tab-active-text', '#ffffff');
+            root.style.setProperty('--center-title-bg', '#500000');
+            root.style.setProperty('--center-title-text', '#ffcccc');
+            root.style.setProperty('--lcd-bg', '#220808');
+            root.style.setProperty('--lcd-text', '#ffcccc');
+            root.style.setProperty('--panel-header-bg', '#800000');
+            root.style.setProperty('--panel-header-text', '#ffffff');
+            root.style.setProperty('--side-btn-bg', '#501515');
+            root.style.setProperty('--side-btn-text', '#ffffff');
+            root.style.setProperty('--btn-bg', '#501515');
+            root.style.setProperty('--btn-text', '#ffffff');
+            root.style.setProperty('--btn-primary-text', '#ffcccc');
+            root.style.setProperty('--reserve-btn-bg', '#6b2020');
+            root.style.setProperty('--reserve-btn-text', '#ffffff');
+            root.style.setProperty('--sent-bubble-bg', '#ffcccc');
+            root.style.setProperty('--sent-bubble-text', '#000000');
+            root.style.setProperty('--recv-bubble-bg', '#800000');
+            root.style.setProperty('--recv-bubble-text', '#ffffff');
+        } else if(preset === 'gothic') {
+            root.style.setProperty('--bg-color', '#11052c');
+            root.style.setProperty('--win-bg', '#2d0b5a');
+            root.style.setProperty('--win-border-light', '#5c22a3');
+            root.style.setProperty('--win-border-dark', '#120228');
+            root.style.setProperty('--win-text', '#ffffff');
+            root.style.setProperty('--title-bg', 'linear-gradient(90deg, #4d089a, #802bb1)');
+            root.style.setProperty('--title-text', '#ffffff');
+            root.style.setProperty('--menu-hover-bg', '#4d089a');
+            root.style.setProperty('--menu-hover-text', '#ffffff');
+            root.style.setProperty('--tab-bar-bg', '#1d053d');
+            root.style.setProperty('--tab-btn-bg', '#2d0b5a');
+            root.style.setProperty('--tab-btn-text', '#d8b4fe');
+            root.style.setProperty('--tab-active-bg', '#2d0b5a');
+            root.style.setProperty('--tab-active-text', '#ffffff');
+            root.style.setProperty('--center-title-bg', '#3b0764');
+            root.style.setProperty('--center-title-text', '#f0abfc');
+            root.style.setProperty('--lcd-bg', '#1e0738');
+            root.style.setProperty('--lcd-text', '#e9d5ff');
+            root.style.setProperty('--panel-header-bg', '#4d089a');
+            root.style.setProperty('--panel-header-text', '#ffffff');
+            root.style.setProperty('--side-btn-bg', '#3b0764');
+            root.style.setProperty('--side-btn-text', '#ffffff');
+            root.style.setProperty('--btn-bg', '#3b0764');
+            root.style.setProperty('--btn-text', '#ffffff');
+            root.style.setProperty('--btn-primary-text', '#e0c3fc');
+            root.style.setProperty('--reserve-btn-bg', '#4a157a');
+            root.style.setProperty('--reserve-btn-text', '#ffffff');
+            root.style.setProperty('--sent-bubble-bg', '#e0c3fc');
+            root.style.setProperty('--sent-bubble-text', '#000000');
+            root.style.setProperty('--recv-bubble-bg', '#4d089a');
+            root.style.setProperty('--recv-bubble-text', '#ffffff');
+        } else if(preset === 'cyber') {
+            root.style.setProperty('--bg-color', '#051923');
+            root.style.setProperty('--win-bg', '#003554');
+            root.style.setProperty('--win-border-light', '#006494');
+            root.style.setProperty('--win-border-dark', '#001427');
+            root.style.setProperty('--win-text', '#ffffff');
+            root.style.setProperty('--title-bg', 'linear-gradient(90deg, #0582ca, #00a6fb)');
+            root.style.setProperty('--title-text', '#ffffff');
+            root.style.setProperty('--menu-hover-bg', '#0582ca');
+            root.style.setProperty('--menu-hover-text', '#ffffff');
+            root.style.setProperty('--tab-bar-bg', '#021e2f');
+            root.style.setProperty('--tab-btn-bg', '#003554');
+            root.style.setProperty('--tab-btn-text', '#89d6fb');
+            root.style.setProperty('--tab-active-bg', '#003554');
+            root.style.setProperty('--tab-active-text', '#ffffff');
+            root.style.setProperty('--center-title-bg', '#00283a');
+            root.style.setProperty('--center-title-text', '#00a6fb');
+            root.style.setProperty('--lcd-bg', '#001d2d');
+            root.style.setProperty('--lcd-text', '#89d6fb');
+            root.style.setProperty('--panel-header-bg', '#0582ca');
+            root.style.setProperty('--panel-header-text', '#ffffff');
+            root.style.setProperty('--side-btn-bg', '#00283a');
+            root.style.setProperty('--side-btn-text', '#ffffff');
+            root.style.setProperty('--btn-bg', '#00283a');
+            root.style.setProperty('--btn-text', '#ffffff');
+            root.style.setProperty('--btn-primary-text', '#89d6fb');
+            root.style.setProperty('--reserve-btn-bg', '#004d73');
+            root.style.setProperty('--reserve-btn-text', '#ffffff');
+            root.style.setProperty('--sent-bubble-bg', '#00a6fb');
+            root.style.setProperty('--sent-bubble-text', '#000000');
+            root.style.setProperty('--recv-bubble-bg', '#0582ca');
+            root.style.setProperty('--recv-bubble-text', '#ffffff');
+        }
+    }
+
+    function applyCustomColors() {
+        const bg = document.getElementById('bgColorPicker').value;
+        const winBg = document.getElementById('winBgColorPicker').value;
+        const sentBg = document.getElementById('sentBgColorPicker').value;
+        const recvBg = document.getElementById('recvBgColorPicker').value;
+
+        document.body.style.backgroundColor = bg;
+        document.documentElement.style.setProperty('--win-bg', winBg);
+        document.documentElement.style.setProperty('--sent-bubble-bg', sentBg);
+        document.documentElement.style.setProperty('--recv-bubble-bg', recvBg);
+    }
+
+    // Clean 캡쳐 시 소리 버튼, 입력창, 하단 액션바 숨김 & LCD 대화창 전체 확대
+    function takeCleanScreenshot() {
+        const customTitle = document.getElementById('customCaptureTitleInput').value.trim() || "📱 문자 메신저";
+        
+        const titleSpan = document.getElementById('displayWindowTitle');
+        const soundBtn = document.getElementById('soundToggleButton');
+        const bottomActions = document.getElementById('bottomActionsContainer');
+        
+        const smsInputBox = document.getElementById('smsInputBoxArea');
+        const phoneLcd = document.getElementById('phoneLcdArea');
+
+        const noteSendBox = document.getElementById('noteSendBoxArea');
+        const noteListBox = document.getElementById('noteListBoxArea');
+
+        const oldTitleText = titleSpan.innerText;
+        const oldSoundDisplay = soundBtn.style.display;
+        const isSmsTabActive = document.getElementById('tab-sms').classList.contains('active');
+        const isNoteTabActive = document.getElementById('tab-notes').classList.contains('active');
+
+        titleSpan.innerText = customTitle;
+        soundBtn.style.display = 'none';
+        bottomActions.style.display = 'none';
+
+        if(isSmsTabActive) {
+            smsInputBox.style.display = 'none';
+            phoneLcd.style.height = '480px';
+        }
+
+        if(isNoteTabActive) {
+            noteSendBox.style.display = 'none';
+            noteListBox.style.width = '100%';
+        }
+
+        closeModal('screenshotModal');
+
+        setTimeout(() => {
+            html2canvas(document.getElementById('mainWindow')).then(canvas => {
+                // 원상 복구
+                titleSpan.innerText = oldTitleText;
+                soundBtn.style.display = oldSoundDisplay;
+                bottomActions.style.display = 'flex';
+
+                if(isSmsTabActive) {
+                    smsInputBox.style.display = 'flex';
+                    phoneLcd.style.height = '290px';
+                }
+
+                if(isNoteTabActive) {
+                    noteSendBox.style.display = 'flex';
+                    noteListBox.style.width = '60%';
+                }
+
+                const link = document.createElement('a');
+                link.download = `messenger_capture_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }, 200);
+    }
+
+    function updateSentBoxUI() {
+        const box = document.getElementById('sentBoxList');
+        box.innerHTML = '';
+        sentHistory.forEach(item => {
+            const el = document.createElement('div');
+            el.style.cssText = "border-bottom:1px solid #ddd; padding:4px 0;";
+            el.innerHTML = `<b>[${item.time}] ${item.receiver}</b><br>${item.msg}`;
+            box.prepend(el);
+        });
+    }
+
+    function addReservation() {
+        const seconds = parseInt(document.getElementById('reserveTimeSelect').value);
+        const msg = document.getElementById('reserveMsgInput').value.trim();
+
+        if(!msg) {
+            alert('예약 메시지 내용을 작성해 주세요.');
+            return;
+        }
+
+        const resItem = { id: Date.now(), receiver: currentReceiver, msg: msg, sec: seconds };
+        reserveQueue.push(resItem);
+        updateReserveUI();
+
+        document.getElementById('reserveMsgInput').value = '';
+        alert(`${seconds}초 뒤 대화창에 메시지가 자동 추가됩니다!`);
+
+        setTimeout(() => {
+            if(!receiverData[currentReceiver]) receiverData[currentReceiver] = [];
+            receiverData[currentReceiver].push({
+                id: Date.now(),
+                type: currentSendMode,
+                receiver: currentReceiver,
+                text: msg
+            });
+            renderLcdForCurrentReceiver();
+
+            reserveQueue = reserveQueue.filter(q => q.id !== resItem.id);
+            updateReserveUI();
+        }, seconds * 1000);
+    }
+
+    function updateReserveUI() {
+        const qList = document.getElementById('reserveQueueList');
+        if(reserveQueue.length === 0) {
+            qList.innerHTML = '<div style="color:#888;">예약 등록된 문자가 없습니다.</div>';
+            return;
+        }
+
+        qList.innerHTML = '';
+        reserveQueue.forEach(q => {
+            const div = document.createElement('div');
+            div.style.cssText = "border-bottom:1px solid #eee; padding:3px 0;";
+            div.innerHTML = `<b>[${q.sec}초 후 입력 예정]</b> ${q.msg}`;
+            qList.appendChild(div);
+        });
+    }
+</script>
+</body>
+</html>
